@@ -1,0 +1,48 @@
+---
+- name: Install Oracle 19c on Linux Batch Server
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install required dependencies
+      yum:
+        name:
+          - libaio
+          - unzip
+          - gcc
+          - make
+        state: present
+
+    - name: Create directory for Oracle installation
+      file:
+        path: /opt/oracle
+        state: directory
+        mode: '0755'
+
+    - name: Download Oracle 19c tarball from Artifactory
+      get_url:
+        url: "https://artifactory.example.com/artifactory/oracle/oracle19c.tar"
+        dest: /opt/oracle/oracle19c.tar
+        mode: '0755'
+
+    - name: Extract Oracle 19c tarball
+      unarchive:
+        src: /opt/oracle/oracle19c.tar
+        dest: /opt/oracle
+        remote_src: yes
+
+    - name: Run Oracle 19c installer
+      command: /opt/oracle/database/runInstaller -silent -responseFile /opt/oracle/response/db_install.rsp
+      args:
+        chdir: /opt/oracle/database
+
+    - name: Run root.sh script
+      command: /opt/oracle/root.sh
+      become: true
+
+    - name: Check Oracle 19c installation
+      shell: "/opt/oracle/product/19c/dbhome_1/bin/sqlplus -version"
+      register: sqlplus_version
+
+    - name: Display Oracle version
+      debug:
+        msg: "Installed Oracle version: {{ sqlplus_version.stdout }}"
